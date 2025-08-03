@@ -42,7 +42,7 @@ void GaggiMateController::setup() {
     this->brewBtn = new DigitalInput(_config.brewButtonPin, [this](const bool state) { _ble.sendBtnState(0, state); });
     this->steamBtn = new DigitalInput(_config.steamButtonPin, [this](const bool state) { _ble.sendBtnState(1, state); });
 
-    // 4-Pin peripheral port
+    // 4-Pin peripheral port (LED/ToF)
     if (!Wire.begin(_config.sunriseSdaPin, _config.sunriseSclPin, 400000)) {
         ESP_LOGE(LOG_TAG, "Failed to initialize I2C bus");
     }
@@ -53,6 +53,24 @@ void GaggiMateController::setup() {
         _config.capabilites.tof = true;
         _ble.registerLedControlCallback(
             [this](uint8_t channel, uint8_t brightness) { ledController->setChannel(channel, brightness); });
+    }
+
+    // Hardware scale (HX711, 5-pin port)
+    this->hardwareScale = new HardwareScale(_config.scaleSdaPin, _config.scaleSda1Pin, _config.scaleSclPin,
+                                              [this](float weight) { _ble.sendScaleMeasurement(weight); },
+                                              [this](float scaleFactor1, float scaleFactor2) { _ble.sendScaleCalibration(scaleFactor1, scaleFactor2); });
+    this->hardwareScale->setup();
+    if (this->hardwareScale->isAvailable()) {
+        _config.capabilites.hwScale = true;
+        _ble.registerScaleTareCallback([this]() {
+            this->hardwareScale->tare();
+        });
+        _ble.registerScaleCalibrationCallback([this](float scaleFactor1, float scaleFactor2) {
+            this->hardwareScale->setScaleFactors(scaleFactor1, scaleFactor2);
+        });
+        _ble.registerScaleCalibrateCallback([this](uint8_t scale, float calibration_weight) {
+            this->hardwareScale->calibrateScale(scale, calibration_weight);
+        });
     }
 
     String systemInfo = make_system_info(_config, _version);
