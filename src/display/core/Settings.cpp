@@ -109,6 +109,10 @@ Settings::Settings() {
     String buttonBehaviorStr = preferences.getString("btnb", "brew,steam,water");
     buttonBehavior = explode(buttonBehaviorStr, ',');
 
+    // Hardware scale settings
+    scaleFactor1 = preferences.getFloat("hs_sf1", 0.0f);
+    scaleFactor2 = preferences.getFloat("hs_sf2", 0.0f);
+
     preferences.end();
 
     xTaskCreate(loopTask, "Settings::loop", configMINIMAL_STACK_SIZE * 6, this, 1, &taskHandle);
@@ -443,6 +447,12 @@ void Settings::setButtonBehaviorList(const std::vector<String> &behavior_list) {
     save();
 }
 
+void Settings::setScaleFactors(float scale_factor_1, float scale_factor_2) {
+    scaleFactor1 = scale_factor_1;
+    scaleFactor2 = scale_factor_2;
+    save();
+}
+
 void Settings::doSave() {
     if (!dirty) {
         return;
@@ -526,6 +536,10 @@ void Settings::doSave() {
     preferences.putInt("sr_fd", fullTankDistance);
     preferences.putInt("alt_relay", altRelayFunction);
     preferences.putString("btnb", implode(buttonBehavior, ","));
+
+    // Hardware scale settings
+    preferences.putFloat("hs_sf1", scaleFactor1);
+    preferences.putFloat("hs_sf2", scaleFactor2);
 
     preferences.end();
 }

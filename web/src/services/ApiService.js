@@ -170,6 +170,7 @@ export default class ApiService {
       targetWeight: message.tw || 0,
       activeTargetWeight: (message?.process?.a && message.tw) || 0,
       currentFlow: message.fl,
+      currentWeight: message.cw,
       mode: message.m,
       selectedProfile: message.p,
       selectedProfileId: message.puid,
@@ -201,6 +202,7 @@ export default class ApiService {
         dimming: message.cd,
         pressure: message.cp,
         ledControl: message.led,
+        hardwareScale: message.hs,
       },
       history: [...machine.value.history, historyEntry],
     };
@@ -230,6 +232,7 @@ export const machine = signal({
   capabilities: {
     pressure: false,
     dimming: false,
+    hardwareScale: false,
   },
   history: [],
 });

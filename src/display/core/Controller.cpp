@@ -28,6 +28,7 @@
 #include <display/drivers/LilyGoDriver.h>
 #include <display/drivers/WaveshareDriver.h>
 #endif
+#include <display/plugins/HardwareScalePlugin.h>
 
 const String LOG_TAG = F("Controller");
 
@@ -72,7 +73,8 @@ void Controller::setup() {
     }
     pluginManager->registerPlugin(new WebUIPlugin());
     pluginManager->registerPlugin(&ShotHistory);
-    pluginManager->registerPlugin(&BLEScales);
+    // pluginManager->registerPlugin(&BLEScales);
+    pluginManager->registerPlugin(&HardwareScales);
     pluginManager->registerPlugin(new LedControlPlugin());
     pluginManager->registerPlugin(new AutoWakeupPlugin());
     pluginManager->setup(this);
@@ -217,6 +219,21 @@ void Controller::setupBluetooth() {
         ESP_LOGV(LOG_TAG, "Received new TOF distance: %d", value);
         pluginManager->trigger("controller:tof:change", "value", value);
     });
+
+    clientController.registerScaleMeasurementCallback([this](const float value) {
+        ESP_LOGV(LOG_TAG, "Received new scale measurement: %.2f", value);
+        pluginManager->trigger("controller:scale:measurement", "value", value);
+    });
+    clientController.registerScaleCalibrationCallback([this](const float scaleFactor1, const float scaleFactor2) {
+        ESP_LOGV(LOG_TAG, "Received new scale calibration: %.3f, %.3f", scaleFactor1, scaleFactor2);
+        settings.setScaleFactors(scaleFactor1, scaleFactor2);
+        Event e;
+        e.id = "controller:scale:cal_update";
+        e.setFloat("scaleFactor1", scaleFactor1);
+        e.setFloat("scaleFactor2", scaleFactor2);
+        pluginManager->trigger(e);
+    });
+
     pluginManager->trigger("controller:bluetooth:init");
 }
 
@@ -237,6 +254,7 @@ void Controller::setupInfos() {
                                     .pressure = doc["cp"]["ps"].as<bool>(),
                                     .ledControl = doc["cp"]["led"].as<bool>(),
                                     .tof = doc["cp"]["tof"].as<bool>(),
+                                    .hwScale = doc["cp"]["hs"].as<bool>()
                                 }};
     }
 }

@@ -117,6 +117,8 @@ class Settings {
         return "";
     };
     std::vector<String> getButtonBehaviorList() const { return buttonBehavior; }
+    float getScaleFactor1() const { return scaleFactor1; }
+    float getScaleFactor2() const { return scaleFactor2; }
     void setTargetSteamTemp(int target_steam_temp);
     void setTargetWaterTemp(int target_water_temp);
     void setTemperatureOffset(int temperature_offset);
@@ -178,6 +180,7 @@ class Settings {
     void setAutoWakeupSchedules(const std::vector<AutoWakeupSchedule> &schedules);
     void setButtonBehavior(int index, String behavior);
     void setButtonBehaviorList(const std::vector<String> &behavior_list);
+    void setScaleFactors(float scale_factor_1, float scale_factor_2);
 
   private:
     Preferences preferences;
@@ -246,6 +249,10 @@ class Settings {
     int fullTankDistance = 50;
     int altRelayFunction = ALT_RELAY_GRIND; // Default to grind
     std::vector<String> buttonBehavior;
+
+    // Hardware scale settings
+    float scaleFactor1 = 0.0f;
+    float scaleFactor2 = 0.0f;
 
     void doSave();
     xTaskHandle taskHandle;

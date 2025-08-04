@@ -19,6 +19,7 @@
 #include <unordered_map>
 #include <vector>
 #include <version.h>
+#include "HardwareScalePlugin.h"
 
 static std::unordered_map<uint32_t, std::string> rxBuffers;
 static WebUIPlugin *g_webUIPlugin = nullptr;
@@ -106,6 +107,7 @@ void WebUIPlugin::loop() {
         doc["bt"] =
             controller->isVolumetricAvailable() && controller->getProfileManager()->getSelectedProfile().isVolumetric() ? 1 : 0;
         doc["btd"] = profileManager->getSelectedProfile().getTotalDuration();
+        doc["hs"] = controller->getSystemInfo().capabilities.hwScale;
         doc["led"] = controller->getSystemInfo().capabilities.ledControl;
         doc["gtd"] = controller->getTargetGrindDuration();
         doc["gtv"] = controller->getSettings().getTargetGrindVolume();
@@ -613,6 +615,15 @@ void WebUIPlugin::handleSettings(AsyncWebServerRequest *request) const {
                 }
                 settings->setAutoWakeupSchedules(schedules);
             }
+            if (request->hasArg("scaleFactor1") || request->hasArg("scaleFactor2")) {
+                float scaleFactor1 = settings->getScaleFactor1();
+                float scaleFactor2 = settings->getScaleFactor2();
+                if (request->hasArg("scaleFactor1"))
+                    scaleFactor1 = request->arg("scaleFactor1").toFloat();
+                if (request->hasArg("scaleFactor2"))
+                    scaleFactor2 = request->arg("scaleFactor2").toFloat();
+                settings->setScaleFactors(scaleFactor1, scaleFactor2);
+            }
             settings->save(true);
         });
         pluginManager->trigger("settings:changed");
@@ -686,6 +697,8 @@ void WebUIPlugin::handleSettings(AsyncWebServerRequest *request) const {
         }
     }
     doc["autowakeupSchedules"] = schedulesStr;
+    doc["scaleFactor1"] = settings.getScaleFactor1();
+    doc["scaleFactor2"] = settings.getScaleFactor2();
     serializeJson(doc, *response);
     request->send(response);
 
