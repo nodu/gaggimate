@@ -50,6 +50,8 @@ class WebUIPlugin : public Plugin {
     void updateOTAProgress(uint8_t phase, int progress);
     void sendAutotuneResult();
     void sendAutotuneFailed();
+    void handleScaleTare(AsyncWebServerRequest *request);
+    void handleScaleCalibrate(AsyncWebServerRequest *request);
 
     // Core dump download
     void handleCoreDumpDownload(AsyncWebServerRequest *request);

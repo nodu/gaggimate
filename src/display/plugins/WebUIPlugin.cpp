@@ -97,6 +97,9 @@ void WebUIPlugin::loop() {
         doc["pr"] = controller->getCurrentPressure();
         doc["fl"] = controller->getCurrentPumpFlow();
         doc["pt"] = controller->getTargetPressure();
+        if (HardwareScales.isConnected()) {
+            doc["cw"] = HardwareScales.getWeight();
+        }
         doc["m"] = controller->getMode();
         doc["p"] = controller->getProfileManager()->getSelectedProfile().label;
         doc["puid"] = controller->getProfileManager()->getSelectedProfile().id;
@@ -214,6 +217,9 @@ void WebUIPlugin::setupServer() {
         doc["mode"] = controller->getMode();
         doc["tt"] = controller->getTargetTemp();
         doc["ct"] = controller->getCurrentTemp();
+        if (HardwareScales.isConnected()) {
+            doc["cw"] = HardwareScales.getWeight();
+        }
         serializeJson(doc, *response);
         request->send(response);
     });
@@ -861,6 +867,45 @@ void WebUIPlugin::handleFlushStart(uint32_t clientId, JsonDocument &request) {
     String msg;
     serializeJson(response, msg);
     ws.text(clientId, msg);
+}
+
+void WebUIPlugin::handleScaleTare(AsyncWebServerRequest *request) {
+    if (request->method() != HTTP_POST) {
+        request->send(404);
+        return;
+    }
+    HardwareScales.tare();
+    JsonDocument doc;
+    doc["success"] = true;
+    AsyncResponseStream *response = request->beginResponseStream("application/json");
+    serializeJson(doc, *response);
+    request->send(response);
+}
+
+void WebUIPlugin::handleScaleCalibrate(AsyncWebServerRequest *request) {
+    if (request->method() != HTTP_POST) {
+        request->send(404);
+        return;
+    }
+    if (!request->hasArg("c")) {
+        request->send(400, "Missing cell index argument");
+        return;
+    }
+    if (!request->hasArg("cw")) {
+        request->send(400, "Missing calibration weight argument");
+        return;
+    }
+
+    uint8_t cellIndex = request->arg("c").toInt();
+    float calibrationWeight = request->arg("cw").toFloat();
+
+    HardwareScales.calibrate(cellIndex, calibrationWeight);
+
+    JsonDocument doc;
+    doc["success"] = true;
+    AsyncResponseStream *response = request->beginResponseStream("application/json");
+    serializeJson(doc, *response);
+    request->send(response);
 }
 
 void WebUIPlugin::handleCoreDumpDownload(AsyncWebServerRequest *request) {

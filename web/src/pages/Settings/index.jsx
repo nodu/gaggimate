@@ -21,6 +21,7 @@ const ledControl = computed(() => machine.value.capabilities.ledControl);
 const pressureAvailable = computed(() => machine.value.capabilities.pressure);
 const connected = computed(() => machine.value.connected);
 const tofDistance = computed(() => machine.value.status.tofDistance);
+const hwScale = computed(() => machine.value.capabilities.hardwareScale);
 
 /**
  * Split a PID CSV string into the form's two-input shape.
@@ -367,9 +368,6 @@ export function Settings() {
                     onChange={onChange('targetSteamTemp')}
                   />
                   <span aria-label='celsius'>°C</span>
-                </label>
-              </div>
-            </div>
             <div className='form-control'>
               <label htmlFor='targetWaterTemp' className='mb-2 block text-sm font-medium'>
                 Default Water Temperature
@@ -1148,6 +1146,48 @@ export function Settings() {
                     </Tooltip>
                   </div>
                 </div>
+              </div>
+            </Card>
+          )}
+
+          {hwScale.value && (
+            <Card sm={10} lg={5} title='Hardware Scale Settings'>
+              <div className='mb-2 text-sm opacity-70'>
+                Set the calibration factors for the hardware scale.
+              </div>
+              <div className='form-control mb-4'>
+                <label htmlFor='scaleFactor1' className='mb-2 block text-sm font-medium'>
+                  Load Cell 1 Scale Factor
+                </label>
+                <input
+                  id='scaleFactor1'
+                  name='scaleFactor1'
+                  type='number'
+                  className='input input-bordered w-full'
+                  placeholder='200.00'
+                  min='-50000.00'
+                  max='50000.00'
+                  step='0.01'
+                  value={formData.scaleFactor1}
+                  onChange={onChange('scaleFactor1')}
+                />
+              </div>
+              <div className='form-control mb-4'>
+                <label htmlFor='scaleFactor2' className='mb-2 block text-sm font-medium'>
+                  Load Cell 2 Scale Factor
+                </label>
+                <input
+                  id='scaleFactor2'
+                  name='scaleFactor2'
+                  type='number'
+                  className='input input-bordered w-full'
+                  placeholder='200.00'
+                  min='-50000.00'
+                  max='50000.00'
+                  step='0.01'
+                  value={formData.scaleFactor2}
+                  onChange={onChange('scaleFactor2')}
+                />
               </div>
             </Card>
           )}

@@ -1,3 +1,4 @@
+import { computed } from '@preact/signals';
 import { useCallback, useContext, useState, useEffect } from 'preact/hooks';
 import { ApiServiceContext, machine } from '../../services/ApiService.js';
 import {
@@ -18,6 +19,8 @@ import CompactProcessControls from './CompactProcessControls.jsx';
 import { getDashboardLayout, DASHBOARD_LAYOUTS } from '../../utils/dashboardManager.js';
 
 Chart.register(LineController, TimeScale, LinearScale, PointElement, LineElement, Filler, Legend);
+
+const hwScale = computed(() => machine.value.capabilities.hardwareScale);
 
 export function Home() {
   const [dashboardLayout, setDashboardLayout] = useState(DASHBOARD_LAYOUTS.ORDER_FIRST);
