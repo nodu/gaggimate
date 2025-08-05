@@ -51,6 +51,12 @@ export function Home() {
     },
     [apiService],
   );
+  const tareScale = useCallback(() => {
+    apiService.send({
+      tp: 'req:scale:tare',
+    });
+  }, [apiService]);
+
   const mode = machine.value.status.mode;
 
   return (
