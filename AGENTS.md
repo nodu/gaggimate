@@ -1,0 +1,234 @@
+# AGENTS.md
+
+Guidelines for AI coding agents working in this repository.
+
+## Project Overview
+
+GaggiMate is a smart espresso machine controller with three codebases:
+
+1. **Display firmware** (`src/display/`): ESP32-S3 (LilyGo-T-RGB) running LVGL UI, Wi-Fi/BLE, web server, plugin system
+2. **Controller firmware** (`src/controller/`, `lib/GaggiMateController/`): ESP32 handling heater, pump, valve, safety mechanisms
+3. **Web interface** (`web/`): Preact + Vite SPA communicating via WebSocket
+
+The display and controller communicate over BLE (NimBLE). The display is the "brain" that orchestrates plugins, settings, and processes. The controller handles safety-critical hardware.
+
+## Architecture
+
+### Display Core
+
+- **Controller** (`src/display/core/Controller.h`): Central orchestrator managing Wi-Fi, Bluetooth, profiles, settings, and process control
+- **PluginManager** (`src/display/core/PluginManager.h`): Event-driven system where plugins subscribe to events and extend functionality
+- **Event System** (`src/display/core/Event.h`): Type-safe event data structure supporting int, float, and string values
+- **Process Classes** (`src/display/core/process/`): State machines for brew, steam, grind, and pump operations
+- **Settings** (`src/display/core/Settings.h`): Persistent configuration storage
+- **ProfileManager** (`src/display/core/ProfileManager.h`): Manages brewing profiles
+
+### BLE Communication Protocol
+
+The display and controller communicate via BLE using the NimBLE library. The protocol is defined in `lib/NimBLEComm/src/NimBLEComm.h` with UUIDs for characteristics like sensor data, output control, volumetric measurements, LED control, etc.
+
+### Plugins
+
+Plugins in `src/display/plugins/` extend functionality via events:
+
+- **WebUIPlugin**: AsyncWebServer + WebSocket API for the Preact web interface
+- **ShotHistoryPlugin**: Records shot data to SD card with notes/ratings
+- **BLEScalePlugin**: Connects to Bluetooth scales for volumetric dosing
+- **MQTTPlugin**: Home automation integration
+- **HomekitPlugin**: Apple HomeKit integration via HomeSpan
+- **BoilerFillPlugin**: Water level monitoring
+- **AutoWakeupPlugin**: Scheduled machine startup
+- **SmartGrindPlugin**: Intelligent grinder timing
+- **LedControlPlugin**: RGB LED control
+- **mDNSPlugin**: Network discovery
+
+### UI System
+
+The LVGL UI is designed in SquareLine Studio (project in `ui/`). Generated code goes to `src/display/ui/default/` and **must not be manually edited** — it will be overwritten on the next export. To modify the UI:
+
+1. Open the SquareLine Studio project in `ui/`
+2. Make changes in SquareLine Studio
+3. Export to `src/display/ui/default/`
+4. Add custom event handlers in `src/display/ui/default/DefaultUI.h`
+
+There is also a headless mode (`GAGGIMATE_HEADLESS`) that runs without display hardware for minimal setups.
+
+## Build Commands
+
+### Firmware (PlatformIO, C++17)
+
+```bash
+platformio run -e display              # Build display firmware
+platformio run -e controller           # Build controller firmware
+platformio run -e display-headless     # Build headless (no display hardware)
+platformio run -e display-headless-8m  # Build headless for 8MB flash
+platformio run -e display-headless-4m  # Build headless for 4MB flash
+platformio run -e display -t upload    # Upload display firmware
+platformio run -e controller -t upload # Upload controller firmware
+platformio device monitor -e display   # Monitor display serial output
+platformio device monitor -e controller # Monitor controller serial output
+```
+
+### Static Analysis (no unit tests exist)
+
+```bash
+platformio check -e display            # cppcheck on display code
+platformio check -e controller         # cppcheck on controller code
+```
+
+### Web Interface (Node.js 22 required — see .nvmrc)
+
+```bash
+cd web
+npm install                            # Install dependencies
+npm run dev                            # Dev server at localhost:5173
+npm run build                          # Production build
+npm run preview                        # Preview build at localhost:4173
+npm run lint                           # ESLint with auto-fix
+npm run lint:check                     # ESLint check only (no fix)
+npm run format                         # Prettier format (write)
+```
+
+### Code Formatting
+
+```bash
+./scripts/format.sh                    # clang-format all C/C++ in src/ and lib/
+cd web && npm run format               # Prettier for web code
+```
+
+### SPIFFS / Web Assets
+
+```bash
+./scripts/build_spiffs.sh              # Build web UI and copy to data/w/
+platformio run -e display -t uploadfs  # Upload SPIFFS filesystem
+```
+
+## C/C++ Code Style
+
+### Formatting
+
+- `.clang-format`: BasedOnStyle LLVM, IndentWidth 4, ColumnLimit 130
+- Always run `./scripts/format.sh` before committing C/C++ changes
+- Generated UI files in `src/display/ui/` and `src/display/drivers/` are excluded from formatting and **must not be manually edited** — they are generated by SquareLine Studio
+
+### Naming Conventions
+
+| Element | Convention | Examples |
+|---|---|---|
+| Classes / Structs | PascalCase | `BrewProcess`, `ShotLogHeader` |
+| Enum types | `enum class` PascalCase | `ProcessPhase`, `ControlMode` |
+| Enum values | UPPER_SNAKE_CASE or PascalCase | `PHASE_TYPE_BREW`, `Linear` |
+| Methods | camelCase | `getTargetTemp()`, `isActive()` |
+| Member variables (display) | camelCase, no prefix | `currentTemp`, `pluginManager` |
+| Member variables (controller lib) | camelCase, underscore prefix | `_config`, `_mode` |
+| Constants / constexpr | UPPER_SNAKE_CASE | `PING_INTERVAL`, `MAX_AUTOTUNE_TEMP` |
+| Type aliases | `using`, PascalCase or `_t` suffix | `EventCallback`, `pin_control_callback_t` |
+| Free functions | camelCase or snake_case (mixed) | `parseProfile()`, `get_token()` |
+
+### Include Guards and Ordering
+
+- Use `#ifndef FILENAME_H` / `#define FILENAME_H` / `#endif // FILENAME_H` (traditional guards preferred)
+- Include ordering: own header first → local project headers (quotes) → cross-directory project headers (angle brackets) → third-party libs → Arduino/ESP-IDF → standard library
+
+### Error Handling
+
+- No exceptions (embedded context) — use boolean returns, error codes, and early-return guard clauses
+- Use ESP-IDF logging: `ESP_LOGE` (error), `ESP_LOGW` (warning), `ESP_LOGI` (info), `ESP_LOGD` (debug)
+- Each class has a `LOG_TAG` member: `const char *LOG_TAG = "ClassName";`
+- Safety-critical errors trigger immediate hardware shutdown (see `thermalRunawayShutdown()`)
+
+### Memory and Types
+
+- Raw pointers with `new`/`delete` are the dominant pattern; initialize to `nullptr`
+- `std::unique_ptr` is rare but acceptable
+- Use `static_cast<>` not C-style casts
+- Float literals use `f` suffix: `0.0f`, `100.0f`
+- Arduino `String` dominates in display firmware; `std::string` in BLE layer
+- Use `const` on methods, parameters, and locals where appropriate
+- Prefer `constexpr` over `#define` for new constants
+- `auto` used sparingly — prefer explicit types for variable declarations
+
+### Plugin Development
+
+- Create `NewPlugin.h`/`.cpp` in `src/display/plugins/`
+- Inherit from `Plugin`, subscribe to events in constructor via `pluginManager->subscribeToEvent()`
+- Register in `Controller::setup()` in `src/display/core/Controller.cpp`
+- Study `BLEScalePlugin` or `MQTTPlugin` as reference implementations
+
+## Web Interface Code Style (Preact/JavaScript)
+
+### Formatting (Prettier — `.prettierrc`)
+
+- Print width 100, indent 2 spaces, semicolons required
+- Single quotes everywhere including JSX (`jsxSingleQuote: true`)
+- Trailing commas in all positions
+- No parens on single-arg arrows: `x => x + 1`
+- `prettier-plugin-tailwindcss` auto-sorts Tailwind classes
+- Run `npm run format` before committing web changes
+
+### Language
+
+- **Pure JavaScript** — no TypeScript. Files use `.js` and `.jsx` extensions
+- `jsconfig.json` provides IDE support (ES2020 target, bundler module resolution)
+
+### Import Conventions
+
+- Always include file extensions: `./Foo.jsx`, `./utils.js`
+- Relative paths only (no `@` or `~` aliases)
+- FontAwesome icons from deep paths: `import { faList } from '@fortawesome/free-solid-svg-icons/faList'`
+- Preact hooks: `import { useState, useEffect } from 'preact/hooks'`
+- Signals: `import { signal, computed } from '@preact/signals'`
+
+### Component Patterns
+
+- All functional components, no class components
+- Named function declarations preferred: `export function MyComponent() { ... }`
+- Named exports over default exports
+- Destructure props in function parameters
+- `useCallback` for event handlers, `useContext` for `ApiServiceContext`
+- Custom hooks in `src/hooks/` with `use` prefix
+
+### State Management
+
+- Global state via `machine` signal in `src/services/ApiService.js`
+- `computed()` for derived reactive values
+- `ApiServiceContext` provides WebSocket service via `useContext`
+- `useState` for local component state
+
+### Styling
+
+- Utility-first Tailwind CSS + DaisyUI component classes (`btn`, `card`, `input`)
+- DaisyUI semantic colors: `text-base-content`, `bg-base-100`, `text-primary`, `text-error`
+- String concatenation for conditional classes: `` className={`btn ${active ? 'btn-primary' : 'btn-ghost'}`} ``
+- No CSS modules or CSS-in-JS
+
+### File Naming
+
+- Components: PascalCase `.jsx` (`MyComponent.jsx`)
+- Utilities / hooks: camelCase `.js` (`useMyHook.js`, `myUtil.js`)
+- Pages: PascalCase folder with `index.jsx` (`pages/MyPage/index.jsx`)
+- Use `.jsx` only when file contains JSX; `.js` otherwise
+
+## Working with Profiles
+
+Brewing profiles are stored in SPIFFS at `/p/`. The `ProfileManager` handles loading, saving, and switching profiles. Static default profiles are defined in `src/display/core/static_profiles.h`.
+
+## Testing Hardware Changes
+
+When modifying controller hardware logic (`lib/GaggiMateController/`):
+
+1. Changes affect safety-critical systems (heater, thermal runaway protection)
+2. Test thoroughly on actual hardware
+3. Monitor serial output for thermal runaway detection and safety shutoffs
+4. Verify BLE communication still works with the display
+
+## Safety and Architecture Notes
+
+- **Never disable thermal runaway protection** in the controller firmware
+- **Never manually edit** files in `src/display/ui/default/` — generated by SquareLine Studio
+- SPIFFS has limited space — keep web assets minified and gzipped
+- Display firmware uses FreeRTOS — respect task priorities and core pinning (see `platformio.ini` build flags)
+- BLE and Wi-Fi share radio resources — plugins must coordinate via the Controller
+- The WebSocket API uses `tp` for message type and `rid` for request correlation (see `docs/websocket-api.yaml`)
+- SD card operations are handled by ShotHistoryPlugin on the display unit
+- CI runs cppcheck on push/PR (`check.yml`); tagged pushes trigger release builds (`build.yml`)
