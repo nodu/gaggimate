@@ -60,7 +60,7 @@ class NimBLEServerController : public NimBLEServerCallbacks, public NimBLECharac
     NimBLECharacteristic *scaleTareChar = nullptr;
     NimBLECharacteristic *scaleCalibrationChar = nullptr;
     NimBLECharacteristic *scaleCalibrateChar = nullptr;
-    NimBLECharacteristic *scaleWeightMeasurementChar = nullptr; 
+    NimBLECharacteristic *scaleWeightMeasurementChar = nullptr;
 
     simple_output_callback_t outputControlCallback = nullptr;
     advanced_output_callback_t advancedControlCallback = nullptr;

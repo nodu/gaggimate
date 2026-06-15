@@ -67,7 +67,7 @@ class NimBLEClientController : public NimBLEAdvertisedDeviceCallbacks, NimBLECli
     NimBLERemoteCharacteristic *scaleTareChar = nullptr;
     NimBLERemoteCharacteristic *scaleCalibrationChar = nullptr;
     NimBLERemoteCharacteristic *scaleCalibrateChar = nullptr;
-    NimBLERemoteCharacteristic *scaleWeightMeasurementChar = nullptr; 
+    NimBLERemoteCharacteristic *scaleWeightMeasurementChar = nullptr;
     NimBLEAdvertisedDevice *serverDevice = nullptr;
     bool readyForConnection = false;
     xTaskHandle taskHandle;

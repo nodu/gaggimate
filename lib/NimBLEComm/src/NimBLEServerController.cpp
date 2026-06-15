@@ -67,7 +67,8 @@ void NimBLEServerController::initServer(const String infoString) {
 
     scaleTareChar = pService->createCharacteristic(SCALE_TARE_UUID, NIMBLE_PROPERTY::WRITE);
     scaleTareChar->setCallbacks(this);
-    scaleCalibrationChar = pService->createCharacteristic(SCALE_CALIBRATION_UUID, NIMBLE_PROPERTY::WRITE | NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::NOTIFY);
+    scaleCalibrationChar = pService->createCharacteristic(SCALE_CALIBRATION_UUID, NIMBLE_PROPERTY::WRITE | NIMBLE_PROPERTY::READ |
+                                                                                      NIMBLE_PROPERTY::NOTIFY);
     scaleCalibrationChar->setCallbacks(this);
     scaleCalibrateChar = pService->createCharacteristic(SCALE_CALIBRATE_UUID, NIMBLE_PROPERTY::WRITE);
     scaleCalibrateChar->setCallbacks(this);

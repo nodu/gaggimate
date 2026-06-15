@@ -24,9 +24,7 @@ void HardwareScalePlugin::setup(Controller *controller, PluginManager *pluginMan
         this->controller->setVolumetricOverride(_isAvailable);
     });
 
-    pluginManager->on("controller:brew:start", [this](Event const &) {
-       onProcessStart();
-    });
+    pluginManager->on("controller:brew:start", [this](Event const &) { onProcessStart(); });
 
     pluginManager->on("controller:scale:measurement", [this](Event const &event) {
         float value = event.getFloat("value");

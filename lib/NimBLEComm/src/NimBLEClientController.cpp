@@ -160,16 +160,16 @@ bool NimBLEClientController::connectToServer() {
 
     scaleWeightMeasurementChar = pRemoteService->getCharacteristic(NimBLEUUID(SCALE_WEIGHT_MEASUREMENT_UUID));
     if (scaleWeightMeasurementChar != nullptr && scaleWeightMeasurementChar->canNotify()) {
-        scaleWeightMeasurementChar->subscribe(true, std::bind(&NimBLEClientController::notifyCallback, this,
-                                                      std::placeholders::_1,
-                                                      std::placeholders::_2, std::placeholders::_3, std::placeholders::_4));
-    }   
+        scaleWeightMeasurementChar->subscribe(true,
+                                              std::bind(&NimBLEClientController::notifyCallback, this, std::placeholders::_1,
+                                                        std::placeholders::_2, std::placeholders::_3, std::placeholders::_4));
+    }
 
     scaleCalibrationChar = pRemoteService->getCharacteristic(NimBLEUUID(SCALE_CALIBRATION_UUID));
     if (scaleCalibrationChar != nullptr && scaleCalibrationChar->canNotify()) {
         scaleCalibrationChar->subscribe(true, std::bind(&NimBLEClientController::notifyCallback, this, std::placeholders::_1,
-                                                      std::placeholders::_2, std::placeholders::_3, std::placeholders::_4));
-    }   
+                                                        std::placeholders::_2, std::placeholders::_3, std::placeholders::_4));
+    }
 
     delay(500);
 

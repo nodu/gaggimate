@@ -11,6 +11,7 @@
 #include <esp_partition.h>
 #include <esp_system.h>
 
+#include "HardwareScalePlugin.h"
 #include <SD_MMC.h>
 #include <algorithm>
 #include <display/plugins/BLEScalePlugin.h>
@@ -19,7 +20,6 @@
 #include <unordered_map>
 #include <vector>
 #include <version.h>
-#include "HardwareScalePlugin.h"
 
 static std::unordered_map<uint32_t, std::string> rxBuffers;
 static WebUIPlugin *g_webUIPlugin = nullptr;

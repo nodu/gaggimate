@@ -8,15 +8,12 @@
 #define MAX_WAIT_READ_MS 250
 #define MAX_STARTUP_WAIT_MS 1200
 
-HardwareScale::HardwareScale(uint8_t data_pin1, uint8_t data_pin2, uint8_t clock_pin, 
-    const scale_reading_callback_t &reading_callback, 
-    const scale_configuration_callback_t &config_callback)
-    : _data_pin1(data_pin1), _data_pin2(data_pin2), _clock_pin(clock_pin),
-    _scale_factor1(1.0f), _scale_factor2(1.0f),
-    _offset1(0.0f), _offset2(0.0f), _is_taring_or_calibrating(false),
-    _reading_callback(reading_callback),
-    _configuration_callback(config_callback),
-    taskHandle(nullptr) {
+HardwareScale::HardwareScale(uint8_t data_pin1, uint8_t data_pin2, uint8_t clock_pin,
+                             const scale_reading_callback_t &reading_callback,
+                             const scale_configuration_callback_t &config_callback)
+    : _data_pin1(data_pin1), _data_pin2(data_pin2), _clock_pin(clock_pin), _scale_factor1(1.0f), _scale_factor2(1.0f),
+      _offset1(0.0f), _offset2(0.0f), _is_taring_or_calibrating(false), _reading_callback(reading_callback),
+      _configuration_callback(config_callback), taskHandle(nullptr) {
     _raw_weight = {0, 0};
 }
 
@@ -26,13 +23,14 @@ void HardwareScale::setup() {
     pinMode(_clock_pin, OUTPUT);
     digitalWrite(_clock_pin, LOW);
     ESP_LOGV(LOG_TAG, "Initializing hardware scale on DATA: %d, CLOCK: %d", _data_pin, _clock_pin);
-    
+
     long start = millis();
     while (!isReady() && (millis() - start) < MAX_STARTUP_WAIT_MS) {
-            delay(10);
+        delay(10);
     }
     if (!isReady()) {
-        ESP_LOGE(LOG_TAG, "HX711 modules (%d, %d) not ready after max wait time, aborting setup", digitalRead(_data_pin1), digitalRead(_data_pin2));
+        ESP_LOGE(LOG_TAG, "HX711 modules (%d, %d) not ready after max wait time, aborting setup", digitalRead(_data_pin1),
+                 digitalRead(_data_pin2));
         is_initialized = false;
         return;
     } else {
@@ -46,7 +44,8 @@ void HardwareScale::setup() {
             delay(10);
         }
         if (!isReady()) {
-            ESP_LOGE(LOG_TAG, "HX711 modules (%d, %d) not ready after max wait time, aborting setup", digitalRead(_data_pin1), digitalRead(_data_pin2));
+            ESP_LOGE(LOG_TAG, "HX711 modules (%d, %d) not ready after max wait time, aborting setup", digitalRead(_data_pin1),
+                     digitalRead(_data_pin2));
             is_initialized = false;
             return;
         }
@@ -112,9 +111,7 @@ float HardwareScale::convertRawToWeight(const RawReading &raw) const {
     return std::clamp(std::round((weight1 + weight2) * 100.0f) / 100.0f, -1.0f * MAX_SCALE_GRAMS, MAX_SCALE_GRAMS);
 }
 
-float HardwareScale::getWeight() const {
-    return _weight;
-}
+float HardwareScale::getWeight() const { return _weight; }
 
 void HardwareScale::loop() {
     while (!isReady() || _is_taring_or_calibrating) {
@@ -143,7 +140,7 @@ void HardwareScale::tare() {
         delay(10);
     }
     auto raw = readRaw();
-    
+
     _offset1 = raw.value1;
     _offset2 = raw.value2;
     _weight = 0.0f; // Reset weight to zero after tare

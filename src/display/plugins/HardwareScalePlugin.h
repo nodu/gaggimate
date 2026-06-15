@@ -14,10 +14,8 @@ class HardwareScalePlugin : public Plugin {
     void tare();
     void calibrate(uint8_t cell, float calibrationWeight);
 
-    bool isConnected() const {  return _isAvailable; }
-    float getWeight() const {
-        return _lastMeasurement;
-    }
+    bool isConnected() const { return _isAvailable; }
+    float getWeight() const { return _lastMeasurement; }
 
   private:
     void onMeasurement(float value);

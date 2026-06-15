@@ -249,13 +249,11 @@ void Controller::setupInfos() {
     } else {
         systemInfo = SystemInfo{.hardware = doc["hw"].as<String>(),
                                 .version = doc["v"].as<String>(),
-                                .capabilities = SystemCapabilities{
-                                    .dimming = doc["cp"]["dm"].as<bool>(),
-                                    .pressure = doc["cp"]["ps"].as<bool>(),
-                                    .ledControl = doc["cp"]["led"].as<bool>(),
-                                    .tof = doc["cp"]["tof"].as<bool>(),
-                                    .hwScale = doc["cp"]["hs"].as<bool>()
-                                }};
+                                .capabilities = SystemCapabilities{.dimming = doc["cp"]["dm"].as<bool>(),
+                                                                   .pressure = doc["cp"]["ps"].as<bool>(),
+                                                                   .ledControl = doc["cp"]["led"].as<bool>(),
+                                                                   .tof = doc["cp"]["tof"].as<bool>(),
+                                                                   .hwScale = doc["cp"]["hs"].as<bool>()}};
     }
 }
 
