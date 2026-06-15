@@ -368,6 +368,9 @@ export function Settings() {
                     onChange={onChange('targetSteamTemp')}
                   />
                   <span aria-label='celsius'>°C</span>
+                </label>
+              </div>
+            </div>
             <div className='form-control'>
               <label htmlFor='targetWaterTemp' className='mb-2 block text-sm font-medium'>
                 Default Water Temperature
