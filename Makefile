@@ -16,6 +16,7 @@ REMOTE_DIR      ?= ~/gaggimate-bins
 DISPLAY_PORT    ?= /dev/ttyACM0
 CONTROLLER_PORT ?= /dev/ttyACM1
 ESPTOOL         ?= esptool
+MONITOR_PORT    ?= $(firstword $(wildcard /dev/cu.usbmodem* /dev/ttyUSB* /dev/ttyACM*))
 
 # Build output paths
 DISPLAY_BUILD    := .pio/build/display
@@ -112,11 +113,11 @@ install-controller: upload-controller ## Complete controller installation (firmw
 
 monitor-display: ## Monitor serial output from display board
 	@echo -e "$(GREEN)Monitoring display board (Ctrl+] to exit)...$(NC)"
-	platformio device monitor -e display
+	platformio device monitor -e display $(if $(MONITOR_PORT),--port $(MONITOR_PORT),)
 
 monitor-controller: ## Monitor serial output from controller board
 	@echo -e "$(GREEN)Monitoring controller board (Ctrl+] to exit)...$(NC)"
-	platformio device monitor -e controller
+	platformio device monitor -e controller $(if $(MONITOR_PORT),--port $(MONITOR_PORT),)
 
 ##@ Format & Lint
 
