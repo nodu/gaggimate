@@ -33,6 +33,8 @@ class HardwareScale {
     void doCalibrate();
 
     bool is_initialized = false;
+    bool _cell1_present = false;
+    bool _cell2_present = false;
     uint8_t _data_pin1;
     uint8_t _data_pin2;
     uint8_t _clock_pin;
@@ -51,7 +53,7 @@ class HardwareScale {
     const char *LOG_TAG = "HardwareScale";
     static void loopTask(void *arg);
 
-    bool waitForBothReady();
+    bool waitForReady();
     RawReading readRaw();
     float rawToWeight(long raw, float offset) const;
     float smooth(float previous, float current);

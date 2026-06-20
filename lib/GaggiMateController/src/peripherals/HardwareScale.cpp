@@ -24,20 +24,26 @@ void HardwareScale::setup() {
     digitalWrite(_clock_pin, HIGH);
     delay(1);
     digitalWrite(_clock_pin, LOW);
-    ESP_LOGI(LOG_TAG, "Initializing hardware scale on DATA1: GPIO%d, DATA2: GPIO%d, CLOCK: GPIO%d", _data_pin1, _data_pin2, _clock_pin);
+    ESP_LOGI(LOG_TAG, "Initializing hardware scale on DATA1: GPIO%d, DATA2: GPIO%d, CLOCK: GPIO%d", _data_pin1, _data_pin2,
+             _clock_pin);
 
     // HX711 needs ~400ms to wake from power-down after SCK goes LOW
     delay(1000);
 
+    // Detect which cells are present by checking which data pins go LOW
     long start = millis();
-    while (!isReady() && (millis() - start) < MAX_STARTUP_WAIT_MS) {
+    while ((!_cell1_present || !_cell2_present) && (millis() - start) < MAX_STARTUP_WAIT_MS) {
+        if (!_cell1_present && digitalRead(_data_pin1) == LOW) _cell1_present = true;
+        if (!_cell2_present && digitalRead(_data_pin2) == LOW) _cell2_present = true;
         delay(10);
     }
-    if (!isReady()) {
-        ESP_LOGE(LOG_TAG, "HX711 not ready after %ld ms, aborting", millis() - start);
+
+    if (!_cell1_present && !_cell2_present) {
+        ESP_LOGE(LOG_TAG, "No HX711 cells detected after %ld ms, aborting", millis() - start);
         is_initialized = false;
         return;
     }
+    ESP_LOGI(LOG_TAG, "Detected cells: cell1=%s, cell2=%s", _cell1_present ? "yes" : "no", _cell2_present ? "yes" : "no");
 
     // Throwaway read to sync, then wait for next conversion
     readRaw();
@@ -60,9 +66,13 @@ void HardwareScale::setup() {
     xTaskCreate(loopTask, "HardwareScale::loop", configMINIMAL_STACK_SIZE * 4, this, 1, &taskHandle);
 }
 
-// Uses || so init/loop work when at least one HX711 is present.
-// tare() and calibrate() require both cells ready (&&) for accuracy.
-bool HardwareScale::isReady() { return digitalRead(_data_pin1) == LOW || digitalRead(_data_pin2) == LOW; }
+// Only wait for cells that were detected at init time.
+// This ensures we never read a non-present cell (which would return garbage).
+bool HardwareScale::isReady() {
+    if (_cell1_present && digitalRead(_data_pin1) != LOW) return false;
+    if (_cell2_present && digitalRead(_data_pin2) != LOW) return false;
+    return true;
+}
 
 HardwareScale::RawReading HardwareScale::readRaw() {
     unsigned long value1 = 0;
@@ -143,8 +153,8 @@ void HardwareScale::loop() {
         return;
     }
 
-    float v1 = rawToWeight(raw.value1, _offset1);
-    float v2 = rawToWeight(raw.value2, _offset2);
+    float v1 = _cell1_present ? rawToWeight(raw.value1, _offset1) : 0.0f;
+    float v2 = _cell2_present ? rawToWeight(raw.value2, _offset2) : 0.0f;
     float combined = std::round((v1 + v2) * 100.0f) / 100.0f;
     _weight = smooth(_weight, combined);
     ESP_LOGD(LOG_TAG, "v1: %.2f, v2: %.2f, Smoothed: %.2f", v1, v2, _weight);
@@ -169,25 +179,25 @@ void HardwareScale::calibrate(float calibrationWeight) {
     _calibrate_requested = true;
 }
 
-bool HardwareScale::waitForBothReady() {
+bool HardwareScale::waitForReady() {
     long start = millis();
-    while (!(digitalRead(_data_pin1) == LOW && digitalRead(_data_pin2) == LOW) && (millis() - start) < MAX_WAIT_READ_MS) {
+    while (!isReady() && (millis() - start) < MAX_WAIT_READ_MS) {
         delay(10);
     }
-    return digitalRead(_data_pin1) == LOW && digitalRead(_data_pin2) == LOW;
+    return isReady();
 }
 
 void HardwareScale::doTare() {
     long sum1 = 0, sum2 = 0;
     int reads = 0;
-    for (int i = 0; i < 5; i++) {
-        if (!waitForBothReady()) {
+    for (int i = 0; i < 8; i++) {
+        if (!waitForReady()) {
             ESP_LOGE(LOG_TAG, "HX711 not ready for tare read %d, skipping", i);
             continue;
         }
         auto raw = readRaw();
-        sum1 += raw.value1;
-        sum2 += raw.value2;
+        if (_cell1_present) sum1 += raw.value1;
+        if (_cell2_present) sum2 += raw.value2;
         reads++;
     }
 
@@ -196,8 +206,8 @@ void HardwareScale::doTare() {
         return;
     }
 
-    _offset1 = static_cast<float>(sum1) / reads;
-    _offset2 = static_cast<float>(sum2) / reads;
+    if (_cell1_present) _offset1 = static_cast<float>(sum1) / reads;
+    if (_cell2_present) _offset2 = static_cast<float>(sum2) / reads;
     _weight = 0.0f;
     _skip_readings = 3;
     _reading_callback(0.0f, 0.0f, 0.0f);
@@ -208,13 +218,13 @@ void HardwareScale::doCalibrate() {
     long sum1 = 0, sum2 = 0;
     int successfulReads = 0;
     for (int i = 0; i < 10; i++) {
-        if (!waitForBothReady()) {
+        if (!waitForReady()) {
             ESP_LOGE(LOG_TAG, "HX711 not ready during calibration read %d, skipping", i);
             continue;
         }
         auto raw = readRaw();
-        sum1 += raw.value1;
-        sum2 += raw.value2;
+        if (_cell1_present) sum1 += raw.value1;
+        if (_cell2_present) sum2 += raw.value2;
         successfulReads++;
     }
 
@@ -223,12 +233,14 @@ void HardwareScale::doCalibrate() {
         return;
     }
 
-    float avg1 = static_cast<float>(sum1) / successfulReads;
-    float avg2 = static_cast<float>(sum2) / successfulReads;
-    _scale_factor = ((avg1 - _offset1) + (avg2 - _offset2)) / _calibrate_weight;
+    float rawSum = 0.0f;
+    if (_cell1_present) rawSum += (static_cast<float>(sum1) / successfulReads) - _offset1;
+    if (_cell2_present) rawSum += (static_cast<float>(sum2) / successfulReads) - _offset2;
+    _scale_factor = rawSum / _calibrate_weight;
 
     _skip_readings = 3;
-    ESP_LOGI(LOG_TAG, "Calibrated with combined factor: %.3f (weight=%.2f, reads=%d)", _scale_factor, _calibrate_weight, successfulReads);
+    ESP_LOGI(LOG_TAG, "Calibrated with combined factor: %.3f (weight=%.2f, reads=%d)", _scale_factor, _calibrate_weight,
+             successfulReads);
     _configuration_callback(_scale_factor);
 }
 
