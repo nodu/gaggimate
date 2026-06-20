@@ -111,7 +111,6 @@ Settings::Settings() {
 
     // Hardware scale settings
     scaleFactor1 = preferences.getFloat("hs_sf1", 0.0f);
-    scaleFactor2 = preferences.getFloat("hs_sf2", 0.0f);
 
     preferences.end();
 
@@ -447,9 +446,8 @@ void Settings::setButtonBehaviorList(const std::vector<String> &behavior_list) {
     save();
 }
 
-void Settings::setScaleFactors(float scale_factor_1, float scale_factor_2) {
-    scaleFactor1 = scale_factor_1;
-    scaleFactor2 = scale_factor_2;
+void Settings::setScaleFactor(float scale_factor) {
+    scaleFactor1 = scale_factor;
     save();
 }
 
@@ -539,7 +537,6 @@ void Settings::doSave() {
 
     // Hardware scale settings
     preferences.putFloat("hs_sf1", scaleFactor1);
-    preferences.putFloat("hs_sf2", scaleFactor2);
 
     preferences.end();
 }

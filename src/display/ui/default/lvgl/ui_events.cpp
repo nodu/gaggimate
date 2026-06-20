@@ -5,6 +5,7 @@
 
 #include "../../../main.h"
 #include "../../../plugins/BLEScalePlugin.h"
+#include "../../../plugins/HardwareScalePlugin.h"
 #include "ui.h"
 #include <Arduino.h>
 
@@ -175,6 +176,7 @@ void onVolumetricHold(lv_event_t *e) {
 
     controller.getClientController()->tare();
     BLEScales.tare();
+    HardwareScales.tare();
 }
 
 void onVolumetricDelete(lv_event_t *e) { controller.getUI()->onVolumetricDelete(); }

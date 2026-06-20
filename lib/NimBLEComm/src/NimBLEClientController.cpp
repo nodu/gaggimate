@@ -60,7 +60,7 @@ void NimBLEClientController::registerTofMeasurementCallback(const int_callback_t
 
 void NimBLEClientController::registerDisconnectCallback(const void_callback_t &callback) { disconnectCallback = callback; }
 
-void NimBLEClientController::registerScaleMeasurementCallback(const float_callback_t &callback) {
+void NimBLEClientController::registerScaleMeasurementCallback(const scale_measurement_callback_t &callback) {
     scaleMeasurementCallback = callback;
 }
 
@@ -233,18 +233,18 @@ void NimBLEClientController::sendScaleTare() {
     }
 }
 
-void NimBLEClientController::sendCalibrateScale(uint8_t cell, float calibrationWeight) {
+void NimBLEClientController::sendCalibrateScale(float calibrationWeight) {
     if (scaleCalibrateChar != nullptr && client->isConnected()) {
-        char str[10]; // 1,9999.99 is 9 characters plus a null terminator
-        snprintf(str, sizeof(str), "%d,%.2f", cell, calibrationWeight);
+        char str[12];
+        snprintf(str, sizeof(str), "%.2f", calibrationWeight);
         scaleCalibrateChar->writeValue(str);
     }
 }
 
-void NimBLEClientController::sendScaleCalibration(float scaleFactor1, float scaleFactor2) {
+void NimBLEClientController::sendScaleCalibration(float scaleFactor) {
     if (scaleCalibrationChar != nullptr && client->isConnected()) {
-        char str[32]; // -9999.999,-9999.999 is 19 characters plus a null terminator
-        snprintf(str, sizeof(str), "%.3f,%.3f", scaleFactor1, scaleFactor2);
+        char str[16];
+        snprintf(str, sizeof(str), "%.3f", scaleFactor);
         scaleCalibrationChar->writeValue(str);
     }
 }
@@ -310,6 +310,10 @@ void NimBLEClientController::onDisconnect(NimBLEClient *pServer) {
     volumetricTareChar = nullptr;
     ledControlChar = nullptr;
     tofMeasurementChar = nullptr;
+    scaleTareChar = nullptr;
+    scaleCalibrationChar = nullptr;
+    scaleCalibrateChar = nullptr;
+    scaleWeightMeasurementChar = nullptr;
     if (disconnectCallback != nullptr) {
         disconnectCallback();
     }
@@ -395,19 +399,18 @@ void NimBLEClientController::notifyCallback(NimBLERemoteCharacteristic *pRemoteC
         }
     }
     if (pRemoteCharacteristic->getUUID().equals(NimBLEUUID(SCALE_WEIGHT_MEASUREMENT_UUID))) {
-        float value = atof(rawData);
-        ESP_LOGV(LOG_TAG, "Scale weight measurement: %.2f", value);
+        float weight = 0.0f, w1 = 0.0f, w2 = 0.0f;
+        sscanf(rawData, "%f,%f,%f", &weight, &w1, &w2);
+        ESP_LOGV(LOG_TAG, "Scale weight: %.2f (w1=%.2f, w2=%.2f)", weight, w1, w2);
         if (scaleMeasurementCallback != nullptr) {
-            scaleMeasurementCallback(value);
+            scaleMeasurementCallback(weight, w1, w2);
         }
     }
     if (pRemoteCharacteristic->getUUID().equals(NimBLEUUID(SCALE_CALIBRATION_UUID))) {
-        float scaleFactor1 = 0.0f;
-        float scaleFactor2 = 0.0f;
-        sscanf(rawData, "%f,%f", &scaleFactor1, &scaleFactor2);
-        ESP_LOGV(LOG_TAG, "Scale calibration: %.3f, %.3f", scaleFactor1, scaleFactor2);
+        float scaleFactor = atof(rawData);
+        ESP_LOGV(LOG_TAG, "Scale calibration: %.3f", scaleFactor);
         if (scaleCalibrationCallback != nullptr) {
-            scaleCalibrationCallback(scaleFactor1, scaleFactor2);
+            scaleCalibrationCallback(scaleFactor);
         }
     }
 }

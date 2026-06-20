@@ -10,13 +10,12 @@ void HardwareScalePlugin::setup(Controller *controller, PluginManager *pluginMan
 
     pluginManager->on("controller:ready", [this](Event const &) {
         _isAvailable = this->controller->getSystemInfo().capabilities.hwScale;
-        _scaleFactor1 = this->controller->getSettings().getScaleFactor1();
-        _scaleFactor2 = this->controller->getSettings().getScaleFactor2();
+        _scaleFactor = this->controller->getSettings().getScaleFactor();
 
         ESP_LOGI(LOG_TAG, "Hardware scale available: %s", _isAvailable ? "true" : "false");
 
-        if (_scaleFactor1 != 0.0f && _scaleFactor2 != 0.0f) {
-            this->controller->getClientController()->sendScaleCalibration(_scaleFactor1, _scaleFactor2);
+        if (_scaleFactor != 0.0f && _scaleFactor != 1.0f) {
+            this->controller->getClientController()->sendScaleCalibration(_scaleFactor);
             delay(50);
         }
         this->controller->getClientController()->sendScaleTare();
@@ -27,15 +26,15 @@ void HardwareScalePlugin::setup(Controller *controller, PluginManager *pluginMan
     pluginManager->on("controller:brew:start", [this](Event const &) { onProcessStart(); });
 
     pluginManager->on("controller:scale:measurement", [this](Event const &event) {
+        _weight1 = event.getFloat("w1");
+        _weight2 = event.getFloat("w2");
         float value = event.getFloat("value");
-        ESP_LOGI(LOG_TAG, "Scale measurement: %.2f", value);
         this->onMeasurement(value);
     });
 
     pluginManager->on("controller:scale:cal_update", [this](Event const &event) {
-        _scaleFactor1 = event.getFloat("scaleFactor1");
-        _scaleFactor2 = event.getFloat("scaleFactor2");
-        this->controller->getSettings().setScaleFactors(_scaleFactor1, _scaleFactor2);
+        _scaleFactor = event.getFloat("scaleFactor1");
+        this->controller->getSettings().setScaleFactor(_scaleFactor);
     });
 }
 
@@ -46,10 +45,10 @@ void HardwareScalePlugin::tare() {
     }
 }
 
-void HardwareScalePlugin::calibrate(uint8_t cell, float calibrationWeight) {
+void HardwareScalePlugin::calibrate(float calibrationWeight) {
     if (_isAvailable) {
-        ESP_LOGI(LOG_TAG, "Calibrating hardware scale: cell %d, weight %.2f", cell, calibrationWeight);
-        controller->getClientController()->sendCalibrateScale(cell, calibrationWeight);
+        ESP_LOGI(LOG_TAG, "Calibrating hardware scale with weight %.2f", calibrationWeight);
+        controller->getClientController()->sendCalibrateScale(calibrationWeight);
     }
 }
 
@@ -58,8 +57,6 @@ void HardwareScalePlugin::onProcessStart() {
         ESP_LOGI(LOG_TAG, "Starting tare process for hardware scale");
         controller->getClientController()->sendScaleTare();
         delay(200);
-
-        ESP_LOGI(LOG_TAG, "Scale process start completed successfully");
     }
 }
 

@@ -220,17 +220,21 @@ void Controller::setupBluetooth() {
         pluginManager->trigger("controller:tof:change", "value", value);
     });
 
-    clientController.registerScaleMeasurementCallback([this](const float value) {
-        ESP_LOGV(LOG_TAG, "Received new scale measurement: %.2f", value);
-        pluginManager->trigger("controller:scale:measurement", "value", value);
+    clientController.registerScaleMeasurementCallback([this](const float weight, const float w1, const float w2) {
+        ESP_LOGV(LOG_TAG, "Received scale measurement: %.2f (w1=%.2f, w2=%.2f)", weight, w1, w2);
+        Event e;
+        e.id = "controller:scale:measurement";
+        e.setFloat("value", weight);
+        e.setFloat("w1", w1);
+        e.setFloat("w2", w2);
+        pluginManager->trigger(e);
     });
-    clientController.registerScaleCalibrationCallback([this](const float scaleFactor1, const float scaleFactor2) {
-        ESP_LOGV(LOG_TAG, "Received new scale calibration: %.3f, %.3f", scaleFactor1, scaleFactor2);
-        settings.setScaleFactors(scaleFactor1, scaleFactor2);
+    clientController.registerScaleCalibrationCallback([this](const float scaleFactor) {
+        ESP_LOGV(LOG_TAG, "Received new scale calibration: %.3f", scaleFactor);
+        settings.setScaleFactor(scaleFactor);
         Event e;
         e.id = "controller:scale:cal_update";
-        e.setFloat("scaleFactor1", scaleFactor1);
-        e.setFloat("scaleFactor2", scaleFactor2);
+        e.setFloat("scaleFactor1", scaleFactor);
         pluginManager->trigger(e);
     });
 

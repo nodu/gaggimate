@@ -58,16 +58,16 @@ void GaggiMateController::setup() {
     // Hardware scale (HX711, 5-pin port)
     this->hardwareScale = new HardwareScale(
         _config.scaleSdaPin, _config.scaleSda1Pin, _config.scaleSclPin,
-        [this](float weight) { _ble.sendScaleMeasurement(weight); },
-        [this](float scaleFactor1, float scaleFactor2) { _ble.sendScaleCalibration(scaleFactor1, scaleFactor2); });
+        [this](float weight, float w1, float w2) { _ble.sendScaleMeasurement(weight, w1, w2); },
+        [this](float scaleFactor) { _ble.sendScaleCalibration(scaleFactor); });
     this->hardwareScale->setup();
     if (this->hardwareScale->isAvailable()) {
         _config.capabilites.hwScale = true;
         _ble.registerScaleTareCallback([this]() { this->hardwareScale->tare(); });
         _ble.registerScaleCalibrationCallback(
-            [this](float scaleFactor1, float scaleFactor2) { this->hardwareScale->setScaleFactors(scaleFactor1, scaleFactor2); });
+            [this](float scaleFactor) { this->hardwareScale->setScaleFactor(scaleFactor); });
         _ble.registerScaleCalibrateCallback(
-            [this](uint8_t scale, float calibration_weight) { this->hardwareScale->calibrateScale(scale, calibration_weight); });
+            [this](float calibration_weight) { this->hardwareScale->calibrate(calibration_weight); });
     }
 
     String systemInfo = make_system_info(_config, _version);

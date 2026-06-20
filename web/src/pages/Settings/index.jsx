@@ -22,6 +22,7 @@ const pressureAvailable = computed(() => machine.value.capabilities.pressure);
 const connected = computed(() => machine.value.connected);
 const tofDistance = computed(() => machine.value.status.tofDistance);
 const hwScale = computed(() => machine.value.capabilities.hardwareScale);
+const scaleWeight = computed(() => machine.value.status.currentWeight);
 
 /**
  * Split a PID CSV string into the form's two-input shape.
@@ -62,6 +63,7 @@ export function Settings() {
   const [formData, setFormData] = useState({});
   const [currentTheme, setCurrentTheme] = useState('light');
   const [showWifiPassword, setShowWifiPassword] = useState(false);
+  const [calibrating, setCalibrating] = useState(false);
   const [autowakeupSchedules, setAutoWakeupSchedules] = useState([
     { time: '07:00', days: [true, true, true, true, true, true, true] }, // Default: all days enabled
   ]);
@@ -1154,42 +1156,82 @@ export function Settings() {
           )}
 
           {hwScale.value && (
-            <Card sm={10} lg={5} title='Hardware Scale Settings'>
-              <div className='mb-2 text-sm opacity-70'>
-                Set the calibration factors for the hardware scale.
+            <Card sm={10} lg={5} title='Hardware Scale Calibration'>
+              <div className='mb-4 text-sm opacity-70'>
+                Calibrate using a known weight. Current reading:{' '}
+                <span className='font-semibold'>{(scaleWeight.value ?? 0).toFixed(1)}g</span>
               </div>
+              <div className='mb-4 grid grid-cols-2 gap-2 text-sm'>
+                <div className='rounded bg-base-200 p-2'>
+                  Cell 1: <span className='font-semibold'>{(machine.value.status.weight1 ?? 0).toFixed(1)}g</span>
+                </div>
+                <div className='rounded bg-base-200 p-2'>
+                  Cell 2: <span className='font-semibold'>{(machine.value.status.weight2 ?? 0).toFixed(1)}g</span>
+                </div>
+              </div>
+
+              <div className='mb-4'>
+                <button
+                  type='button'
+                  className='btn btn-outline btn-sm'
+                  onClick={() => apiService.send({ tp: 'req:scale:tare' })}
+                >
+                  Tare Scale
+                </button>
+              </div>
+
+              <div className='form-control mb-4'>
+                <label htmlFor='calibrationWeight' className='mb-2 block text-sm font-medium'>
+                  Calibration Weight (grams)
+                </label>
+                <input
+                  id='calibrationWeight'
+                  name='calibrationWeight'
+                  type='number'
+                  className='input input-bordered w-full'
+                  placeholder='100.00'
+                  min='1'
+                  max='5000'
+                  step='0.01'
+                  value={formData.calibrationWeight || ''}
+                  onChange={onChange('calibrationWeight')}
+                />
+              </div>
+
+              <div className='mb-4'>
+                <button
+                  type='button'
+                  className='btn btn-primary btn-sm'
+                  disabled={!formData.calibrationWeight || calibrating}
+                  onClick={async () => {
+                    setCalibrating(true);
+                    const calWeight = parseFloat(formData.calibrationWeight);
+                    apiService.send({ tp: 'req:scale:calibrate', cell: 0, calWeight });
+                    await new Promise((r) => setTimeout(r, 3000));
+                    setCalibrating(false);
+                  }}
+                >
+                  {calibrating ? <><span className='loading loading-spinner loading-xs' /> Calibrating...</> : 'Calibrate'}
+                </button>
+              </div>
+
+              <div className='divider text-xs opacity-50'>Advanced</div>
+
               <div className='form-control mb-4'>
                 <label htmlFor='scaleFactor1' className='mb-2 block text-sm font-medium'>
-                  Load Cell 1 Scale Factor
+                  Scale Factor
                 </label>
                 <input
                   id='scaleFactor1'
                   name='scaleFactor1'
                   type='number'
                   className='input input-bordered w-full'
-                  placeholder='200.00'
+                  placeholder='2000.00'
                   min='-50000.00'
                   max='50000.00'
-                  step='0.01'
+                  step='0.001'
                   value={formData.scaleFactor1}
                   onChange={onChange('scaleFactor1')}
-                />
-              </div>
-              <div className='form-control mb-4'>
-                <label htmlFor='scaleFactor2' className='mb-2 block text-sm font-medium'>
-                  Load Cell 2 Scale Factor
-                </label>
-                <input
-                  id='scaleFactor2'
-                  name='scaleFactor2'
-                  type='number'
-                  className='input input-bordered w-full'
-                  placeholder='200.00'
-                  min='-50000.00'
-                  max='50000.00'
-                  step='0.01'
-                  value={formData.scaleFactor2}
-                  onChange={onChange('scaleFactor2')}
                 />
               </div>
             </Card>

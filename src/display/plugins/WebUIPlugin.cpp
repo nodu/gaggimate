@@ -99,6 +99,8 @@ void WebUIPlugin::loop() {
         doc["pt"] = controller->getTargetPressure();
         if (HardwareScales.isConnected()) {
             doc["cw"] = HardwareScales.getWeight();
+            doc["cw1"] = HardwareScales.getWeight1();
+            doc["cw2"] = HardwareScales.getWeight2();
         }
         doc["m"] = controller->getMode();
         doc["p"] = controller->getProfileManager()->getSelectedProfile().label;
@@ -127,7 +129,9 @@ void WebUIPlugin::loop() {
         bool bleConnected = BLEScales.isConnected();
         // Add Bluetooth scale weight information
         doc["bw"] = bleConnected ? this->currentBluetoothWeight : 0; // current bluetooth weight
-        doc["cw"] = bleConnected ? this->currentBluetoothWeight : 0; // Use 'currentWeight' for forward compatbility
+        if (bleConnected) {
+            doc["cw"] = this->currentBluetoothWeight;
+        }
         doc["bc"] = bleConnected;                                    // bluetooth scale connected status
         // Scale battery — only surfaced when the driver reports one and the
         // value isn't the UNKNOWN sentinel (255). UI omits the battery pill
@@ -382,8 +386,8 @@ void WebUIPlugin::handleWebSocketData(AsyncWebSocket *server, AsyncWebSocketClie
                         HardwareScales.tare();
                     }
                 } else if (msgType == "req:scale:calibrate") {
-                    if (HardwareScales.isConnected() && doc["cell"].is<uint8_t>() && doc["calWeight"].is<float>()) {
-                        HardwareScales.calibrate(doc["cell"].as<uint8_t>(), doc["calWeight"].as<float>());
+                    if (HardwareScales.isConnected() && doc["calWeight"].is<float>()) {
+                        HardwareScales.calibrate(doc["calWeight"].as<float>());
                     }
                 }
             }
@@ -629,14 +633,8 @@ void WebUIPlugin::handleSettings(AsyncWebServerRequest *request) const {
                 }
                 settings->setAutoWakeupSchedules(schedules);
             }
-            if (request->hasArg("scaleFactor1") || request->hasArg("scaleFactor2")) {
-                float scaleFactor1 = settings->getScaleFactor1();
-                float scaleFactor2 = settings->getScaleFactor2();
-                if (request->hasArg("scaleFactor1"))
-                    scaleFactor1 = request->arg("scaleFactor1").toFloat();
-                if (request->hasArg("scaleFactor2"))
-                    scaleFactor2 = request->arg("scaleFactor2").toFloat();
-                settings->setScaleFactors(scaleFactor1, scaleFactor2);
+            if (request->hasArg("scaleFactor1")) {
+                settings->setScaleFactor(request->arg("scaleFactor1").toFloat());
             }
             settings->save(true);
         });
@@ -711,8 +709,7 @@ void WebUIPlugin::handleSettings(AsyncWebServerRequest *request) const {
         }
     }
     doc["autowakeupSchedules"] = schedulesStr;
-    doc["scaleFactor1"] = settings.getScaleFactor1();
-    doc["scaleFactor2"] = settings.getScaleFactor2();
+    doc["scaleFactor1"] = settings.getScaleFactor();
     serializeJson(doc, *response);
     request->send(response);
 

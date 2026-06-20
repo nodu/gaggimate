@@ -3,8 +3,6 @@
 #include "../core/Plugin.h"
 #include <stdint.h>
 
-void on_scale_measurement(float value);
-
 class HardwareScalePlugin : public Plugin {
   public:
     HardwareScalePlugin();
@@ -12,10 +10,12 @@ class HardwareScalePlugin : public Plugin {
     void setup(Controller *controller, PluginManager *pluginManager) override;
     void loop() override {};
     void tare();
-    void calibrate(uint8_t cell, float calibrationWeight);
+    void calibrate(float calibrationWeight);
 
     bool isConnected() const { return _isAvailable; }
     float getWeight() const { return _lastMeasurement; }
+    float getWeight1() const { return _weight1; }
+    float getWeight2() const { return _weight2; }
 
   private:
     void onMeasurement(float value);
@@ -24,7 +24,8 @@ class HardwareScalePlugin : public Plugin {
     const char *LOG_TAG = "HardwareScalePlugin";
     bool _isAvailable;
     float _lastMeasurement = 0.0f;
-    float _scaleFactor1 = 1.0f, _scaleFactor2 = 1.0f;
+    float _weight1 = 0.0f, _weight2 = 0.0f;
+    float _scaleFactor = 1.0f;
 
     Controller *controller = nullptr;
 };

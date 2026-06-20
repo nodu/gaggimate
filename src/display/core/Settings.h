@@ -117,8 +117,7 @@ class Settings {
         return "";
     };
     std::vector<String> getButtonBehaviorList() const { return buttonBehavior; }
-    float getScaleFactor1() const { return scaleFactor1; }
-    float getScaleFactor2() const { return scaleFactor2; }
+    float getScaleFactor() const { return scaleFactor1; }
     void setTargetSteamTemp(int target_steam_temp);
     void setTargetWaterTemp(int target_water_temp);
     void setTemperatureOffset(int temperature_offset);
@@ -180,7 +179,7 @@ class Settings {
     void setAutoWakeupSchedules(const std::vector<AutoWakeupSchedule> &schedules);
     void setButtonBehavior(int index, String behavior);
     void setButtonBehaviorList(const std::vector<String> &behavior_list);
-    void setScaleFactors(float scale_factor_1, float scale_factor_2);
+    void setScaleFactor(float scale_factor);
 
   private:
     Preferences preferences;
@@ -252,7 +251,6 @@ class Settings {
 
     // Hardware scale settings
     float scaleFactor1 = 0.0f;
-    float scaleFactor2 = 0.0f;
 
     void doSave();
     xTaskHandle taskHandle;

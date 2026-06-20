@@ -49,8 +49,9 @@ using remote_err_callback_t = std::function<void(int errorCode)>;
 // Optional 3rd field on AUTOTUNE_CHAR_UUID payload — older display firmware
 // sends only "testTime,samples" and the parser defaults wattage to 0.
 using autotune_callback_t = std::function<void(int testTime, int samples, int heaterWattage)>;
-using scale_calibrate_callback_t = std::function<void(uint8_t cell, float calibrationWeight)>;
-using scale_calibration_callback_t = std::function<void(float scaleFactor1, float scaleFactor2)>;
+using scale_calibrate_callback_t = std::function<void(float calibrationWeight)>;
+using scale_calibration_callback_t = std::function<void(float scaleFactor)>;
+using scale_measurement_callback_t = std::function<void(float weight, float w1, float w2)>;
 using void_callback_t = std::function<void()>;
 
 // New combined callbacks

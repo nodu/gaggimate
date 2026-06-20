@@ -18,8 +18,8 @@ class NimBLEServerController : public NimBLEServerCallbacks, public NimBLECharac
     void sendBtnState(uint8_t index, bool status);
     void sendVolumetricMeasurement(float value);
     void sendTofMeasurement(int value);
-    void sendScaleMeasurement(float weight);
-    void sendScaleCalibration(float scaleFactor1, float scaleFactor2);
+    void sendScaleMeasurement(float weight, float w1, float w2);
+    void sendScaleCalibration(float scaleFactor);
     void registerOutputControlCallback(const simple_output_callback_t &callback);
     void registerAdvancedOutputControlCallback(const advanced_output_callback_t &callback);
     void registerAltControlCallback(const pin_control_callback_t &callback);

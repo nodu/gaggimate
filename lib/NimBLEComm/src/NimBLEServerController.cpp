@@ -145,19 +145,21 @@ void NimBLEServerController::sendTofMeasurement(int value) {
     }
 }
 
-void NimBLEServerController::sendScaleMeasurement(float weight) {
+void NimBLEServerController::sendScaleMeasurement(float weight, float w1, float w2) {
     if (deviceConnected && scaleWeightMeasurementChar != nullptr) {
-        char data[9]; // -1500.00 is 8 bytes + null terminator
-        snprintf(data, sizeof(data), "%.2f", weight);
+        // Round to 2 decimal places and eliminate negative zero
+        auto round2 = [](float v) { float r = std::round(v * 100.0f) / 100.0f; return r == 0.0f ? 0.0f : r; };
+        char data[32];
+        snprintf(data, sizeof(data), "%.2f,%.2f,%.2f", round2(weight), round2(w1), round2(w2));
         scaleWeightMeasurementChar->setValue(data);
         scaleWeightMeasurementChar->notify();
     }
 }
 
-void NimBLEServerController::sendScaleCalibration(float scaleFactor1, float scaleFactor2) {
+void NimBLEServerController::sendScaleCalibration(float scaleFactor) {
     if (deviceConnected && scaleCalibrationChar != nullptr) {
-        char data[32]; // -9999.999,-9999.999 is 19 bytes + null terminator
-        snprintf(data, sizeof(data), "%.3f,%.3f", scaleFactor1, scaleFactor2);
+        char data[16];
+        snprintf(data, sizeof(data), "%.3f", scaleFactor);
         scaleCalibrationChar->setValue(data);
         scaleCalibrationChar->notify();
     }
@@ -317,20 +319,16 @@ void NimBLEServerController::onWrite(NimBLECharacteristic *pCharacteristic) {
             scaleTareCallback();
         }
     } else if (pCharacteristic->getUUID().equals(NimBLEUUID(SCALE_CALIBRATION_UUID))) {
-        auto calibration = String(pCharacteristic->getValue().c_str());
-        float scaleFactor1 = get_token(calibration, 0, ',').toFloat();
-        float scaleFactor2 = get_token(calibration, 1, ',').toFloat();
-        ESP_LOGV(LOG_TAG, "Received scale calibration: %.2f, %.2f", scaleFactor1, scaleFactor2);
+        float scaleFactor = atof(pCharacteristic->getValue().c_str());
+        ESP_LOGV(LOG_TAG, "Received scale calibration: %.3f", scaleFactor);
         if (scaleCalibrationCallback != nullptr) {
-            scaleCalibrationCallback(scaleFactor1, scaleFactor2);
+            scaleCalibrationCallback(scaleFactor);
         }
     } else if (pCharacteristic->getUUID().equals(NimBLEUUID(SCALE_CALIBRATE_UUID))) {
-        auto calibration = String(pCharacteristic->getValue().c_str());
-        uint8_t scale = get_token(calibration, 0, ',').toInt();
-        float calibrationWeight = get_token(calibration, 1, ',').toFloat();
-        ESP_LOGV(LOG_TAG, "Received scale calibrate: %d, %.2f", scale, calibrationWeight);
+        float calibrationWeight = atof(pCharacteristic->getValue().c_str());
+        ESP_LOGV(LOG_TAG, "Received scale calibrate: %.2f", calibrationWeight);
         if (scaleCalibrateCallback != nullptr) {
-            scaleCalibrateCallback(scale, calibrationWeight);
+            scaleCalibrateCallback(calibrationWeight);
         }
     }
 }
