@@ -16,6 +16,7 @@
 #include <display/plugins/AutoWakeupPlugin.h>
 #include <display/plugins/BLEScalePlugin.h>
 #include <display/plugins/BoilerFillPlugin.h>
+#include <display/plugins/HardwareScalePlugin.h>
 #include <display/plugins/HomekitPlugin.h>
 #include <display/plugins/LedControlPlugin.h>
 #include <display/plugins/MQTTPlugin.h>
@@ -28,7 +29,6 @@
 #include <display/drivers/LilyGoDriver.h>
 #include <display/drivers/WaveshareDriver.h>
 #endif
-#include <display/plugins/HardwareScalePlugin.h>
 
 const String LOG_TAG = F("Controller");
 

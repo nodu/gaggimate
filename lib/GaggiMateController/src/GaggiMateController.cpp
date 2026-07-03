@@ -64,8 +64,7 @@ void GaggiMateController::setup() {
     if (this->hardwareScale->isAvailable()) {
         _config.capabilites.hwScale = true;
         _ble.registerScaleTareCallback([this]() { this->hardwareScale->tare(); });
-        _ble.registerScaleCalibrationCallback(
-            [this](float scaleFactor) { this->hardwareScale->setScaleFactor(scaleFactor); });
+        _ble.registerScaleCalibrationCallback([this](float scaleFactor) { this->hardwareScale->setScaleFactor(scaleFactor); });
         _ble.registerScaleCalibrateCallback(
             [this](float calibration_weight) { this->hardwareScale->calibrate(calibration_weight); });
     }

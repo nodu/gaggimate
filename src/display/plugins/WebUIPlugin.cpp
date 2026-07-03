@@ -132,7 +132,7 @@ void WebUIPlugin::loop() {
         if (bleConnected) {
             doc["cw"] = this->currentBluetoothWeight;
         }
-        doc["bc"] = bleConnected;                                    // bluetooth scale connected status
+        doc["bc"] = bleConnected; // bluetooth scale connected status
         // Scale battery — only surfaced when the driver reports one and the
         // value isn't the UNKNOWN sentinel (255). UI omits the battery pill
         // entirely when `sbat` is absent, so disconnected/unknown scales don't
@@ -504,7 +504,8 @@ void WebUIPlugin::handleProfileRequest(uint32_t clientId, JsonDocument &request)
 
 void WebUIPlugin::handleSettings(AsyncWebServerRequest *request) const {
     if (request->method() == HTTP_POST) {
-        controller->getSettings().batchUpdate([request](Settings *settings) {
+        Controller *controllerRef = controller;
+        controller->getSettings().batchUpdate([request, controllerRef](Settings *settings) {
             if (request->hasArg("startupMode"))
                 settings->setStartupMode(request->arg("startupMode") == "brew" ? MODE_BREW : MODE_STANDBY);
             if (request->hasArg("startupProfile"))
@@ -634,7 +635,9 @@ void WebUIPlugin::handleSettings(AsyncWebServerRequest *request) const {
                 settings->setAutoWakeupSchedules(schedules);
             }
             if (request->hasArg("scaleFactor1")) {
-                settings->setScaleFactor(request->arg("scaleFactor1").toFloat());
+                const float scaleFactor = request->arg("scaleFactor1").toFloat();
+                settings->setScaleFactor(scaleFactor);
+                controllerRef->getClientController()->sendScaleCalibration(scaleFactor);
             }
             settings->save(true);
         });

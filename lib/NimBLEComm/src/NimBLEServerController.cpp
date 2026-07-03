@@ -148,7 +148,10 @@ void NimBLEServerController::sendTofMeasurement(int value) {
 void NimBLEServerController::sendScaleMeasurement(float weight, float w1, float w2) {
     if (deviceConnected && scaleWeightMeasurementChar != nullptr) {
         // Round to 2 decimal places and eliminate negative zero
-        auto round2 = [](float v) { float r = std::round(v * 100.0f) / 100.0f; return r == 0.0f ? 0.0f : r; };
+        auto round2 = [](float v) {
+            float r = std::round(v * 100.0f) / 100.0f;
+            return r == 0.0f ? 0.0f : r;
+        };
         char data[32];
         snprintf(data, sizeof(data), "%.2f,%.2f,%.2f", round2(weight), round2(w1), round2(w2));
         scaleWeightMeasurementChar->setValue(data);

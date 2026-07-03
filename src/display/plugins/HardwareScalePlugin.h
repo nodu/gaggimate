@@ -18,7 +18,7 @@ class HardwareScalePlugin : public Plugin {
     float getWeight2() const { return _weight2; }
 
   private:
-    void onMeasurement(float value);
+    void onMeasurement(float value, float weight1, float weight2);
     void onProcessStart();
 
     const char *LOG_TAG = "HardwareScalePlugin";

@@ -23,13 +23,10 @@ void HardwareScalePlugin::setup(Controller *controller, PluginManager *pluginMan
         this->controller->setVolumetricOverride(_isAvailable);
     });
 
-    pluginManager->on("controller:brew:start", [this](Event const &) { onProcessStart(); });
+    pluginManager->on("controller:brew:prestart", [this](Event const &) { onProcessStart(); });
 
     pluginManager->on("controller:scale:measurement", [this](Event const &event) {
-        _weight1 = event.getFloat("w1");
-        _weight2 = event.getFloat("w2");
-        float value = event.getFloat("value");
-        this->onMeasurement(value);
+        this->onMeasurement(event.getFloat("value"), event.getFloat("w1"), event.getFloat("w2"));
     });
 
     pluginManager->on("controller:scale:cal_update", [this](Event const &event) {
@@ -56,11 +53,12 @@ void HardwareScalePlugin::onProcessStart() {
     if (_isAvailable) {
         ESP_LOGI(LOG_TAG, "Starting tare process for hardware scale");
         controller->getClientController()->sendScaleTare();
-        delay(200);
     }
 }
 
-void HardwareScalePlugin::onMeasurement(float value) {
+void HardwareScalePlugin::onMeasurement(float value, float weight1, float weight2) {
     this->_lastMeasurement = value;
+    this->_weight1 = weight1;
+    this->_weight2 = weight2;
     controller->onVolumetricMeasurement(value, VolumetricMeasurementSource::BLUETOOTH);
 }
